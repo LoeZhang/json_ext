@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport"
+          content="width=device-width,height=device-height, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
+          charset=UTF-8"/>
+    <head>
+        <title>Json转Bean</title>
+        <style>
+            *
+            {
+                margin: 0;
+                padding: 0;
+                font-size: 12px;
+                outline: none;
+            }
+
+            textarea::-webkit-input-placeholder
+            {
+                color: #bbbbbb;
+            }
+
+            textarea:-moz-placeholder
+            {
+                color: #bbbbbb;
+            }
+
+            textarea:-ms-input-placeholder
+            {
+                color: #bbbbbb;
+            }
+
+            .item
+            {
+                width: 50%;
+                margin: -1px;
+                border: 1px solid #dddddd;
+            }
+
+            .center
+            {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .centerVertical
+            {
+                display: flex;
+                align-items: center;
+            }
+
+            .centerVertical-right
+            {
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+            }
+
+            button
+            {
+                width: 50px;
+                border-radius: 3px;
+                height: 25px;
+                border: 1px solid rgba(77, 149, 238, 0);
+                background: #b7e0ff;
+                color: #444444;
+            }
+
+            button:active
+            {
+                color: #777777;
+            }
+
+            .unSelect
+            {
+                background: #e7f5ff;
+                color: #000000;
+            }
+
+            #buttonKotlin
+            {
+                margin: 3px 0px 3px 5px;
+                border-top-right-radius: 0;
+                border-bottom-right-radius: 0;
+            }
+
+            #buttonJava
+            {
+                margin: 3px 3px 3px 0;
+                border-top-left-radius: 0;
+                border-bottom-left-radius: 0;
+            }
+
+            #edit
+            {
+                flex: 1;
+                padding: 15px;
+                resize: none;
+                border: 1px;
+                background: transparent;
+            }
+
+            #text
+            {
+                flex: 1;
+                padding: 15px;
+                resize: none;
+                color: #3645ee;
+                background: transparent;
+                border: 0 solid #aaaaaa;
+            }
+
+            .flex
+            {
+                display: flex;
+            }
+
+        </style>
+    </head>
+
+<body style="display: flex;flex-direction: row;flex-wrap: wrap;align-content: flex-start;height: 90vh;margin-right: 1px;padding-bottom: 50px">
+
+<b class="item center" style="color: #3b3ebf; height: 30px;">Json</b>
+<b class="item center" style="color: #3b3ebf; height: 30px;">Bean</b>
+
+<div class="item centerVertical">
+    <button style="margin: 3px 5px 3px 4px;" onclick="clearEdit()">清除</button>
+</div>
+<div class="item centerVertical-right">
+    <button id="buttonKotlin" onclick="selectType(1)">Kotlin</button>
+    <button id="buttonJava" class="unSelect" onclick="selectType(2)">Java</button>
+    <div style="flex: 1"></div>
+    <button id="buttonCopy" style="margin: 3px 2px 3px 3px;" onclick="copy()">复制</button>
+</div>
+
+<div class="item flex" style="height: 100%">
+    <textarea id="edit" placeholder="请输入Json" spellcheck="false" type="text"></textarea>
+</div>
+
+<div class="item flex" style="height: 100%">
+    <textarea id="text" class="item" readonly="readonly" spellcheck="false" type="text"></textarea>
+</div>
+
+</body>
+
+<!--///////////////////////////////////////////////////////////////////////////////////////////////////-->
+
+<script type="text/javascript">
+
+    var edit = document.getElementById('edit');
+    var text = document.getElementById('text');
+    var type = 1;
+    var buttonKotlin = document.getElementById('buttonKotlin');
+    var buttonJava = document.getElementById('buttonJava');
+    var buttonCopy = document.getElementById('buttonCopy');
+    edit.addEventListener('input', function ()
+    {
+        format()
+    });
+
+    //兼容IE
+    edit.addEventListener('edit', function ()
+    {
+        format()
+    });
+
+    function format()
+    {
+        var s = edit.value;
+        var br = String.fromCharCode(13) + String.fromCharCode(10);
+        s = s.replace(/\n            /g, br).replace(/ *{/g, '{');
+
+        // 编辑区域
+        edit.value = s;
+
+        // 格式化区域
+        if (s === '')
+        {
+            text.value = '';
+            return;
+        }
+        var lines = s.split('\n');
+        var sb = [];
+        var gsTer = [];
+
+        // Kotlin
+        if (type === 1)
+        {
+            sb.push('import androidx.annotation.Keep');
+            sb.push('import com.loe.json_ext.JsonName' + br);
+
+            sb.push('@Keep');
+            sb.push('class Bean' + br + '{');
+            for (var i in lines)
+            {
+                var line = lines[i].trim();
+                if (line.charAt(0) === '"')
+                {
+                    var attr = line.split('"')[1];
+                    var v = line.split(':')[1].trim();
+                    var cls = 'Any';
+                    var dft = 'Any()';
+                    if (v.charAt(0) === '"')
+                    {
+                        cls = 'String';
+                        dft = '""';
+                    }
+                    else if (v.indexOf('.') >= 0)
+                    {
+                        cls = 'Double';
+                        dft = '0.0';
+                    }
+                    else if (v.charAt(0) === 't' || v.charAt(0) === 'f')
+                    {
+                        cls = 'Boolean';
+                        dft = 'false';
+                    }
+                    else if (v.charAt(0).match('^-?\\d+$'))
+                    {
+                        if (v.length > 9)
+                        {
+                            cls = 'Long';
+                        } else
+                        {
+                            cls = 'Int';
+                        }
+                        dft = '0';
+                    }
+                    sb.push('    @JsonName("' + attr + '")');
+                    sb.push('    var ' + attr + ': ' + cls + ' = ' + dft + br);
+                }
+            }
+            sb.push('}');
+            text.value = sb.join(br);
+        } else
+        // Java
+        {
+            sb.push('import androidx.annotation.Keep;' + br);
+            sb.push('import com.loe.json_ext.JsonName;' + br);
+
+            sb.push('@Keep');
+            sb.push('public class Bean' + br + '{');
+
+            for (var i in lines)
+            {
+                var line = lines[i].trim();
+                if (line.charAt(0) === '"')
+                {
+                    var attr = line.split('"')[1];
+                    var Attr = attr.charAt(0).toUpperCase() + attr.substring(1);
+                    var v = line.split(':')[1].trim();
+                    var cls = 'Object';
+                    var Cls = 'Object';
+                    var dft = 'new Object()';
+                    if (v.charAt(0) === '"')
+                    {
+                        Cls = 'String';
+                        cls = 'String';
+                        dft = '""';
+                    }
+                    else if (v.indexOf('.') >= 0)
+                    {
+                        Cls = 'Double';
+                        cls = 'double';
+                        dft = '0.0';
+                    }
+                    else if (v.charAt(0) === 't' || v.charAt(0) === 'f')
+                    {
+                        Cls = 'Boolean';
+                        cls = 'boolean';
+                        dft = 'false';
+                    }
+                    else if (v.charAt(0).match('^-?\\d+$'))
+                    {
+                        if (v.length > 9)
+                        {
+                            Cls = 'Long';
+                            cls = 'long';
+                            dft = '0L';
+                        } else
+                        {
+                            Cls = 'Int';
+                            cls = 'int';
+                            dft = '0';
+                        }
+                    }
+                    sb.push('    @JsonName("' + attr + '")');
+                    sb.push('    private ' + cls + ' ' + attr + ' = ' + dft + ';' + br);
+
+                    gsTer.push(br + '    public ' + cls + ' get' + Attr + '()');
+                    gsTer.push('    {');
+                    gsTer.push('        return ' + attr + ';');
+                    gsTer.push('    }')
+                    gsTer.push(br + '    public void set' + Attr + '(' + cls + ' ' + attr + ')');
+                    gsTer.push('    {');
+                    gsTer.push('        this.' + attr + ' = ' + attr + ';');
+                    gsTer.push('    }')
+                }
+            }
+
+            sb.push(gsTer.join(br));
+            sb.push('}');
+            text.value = sb.join(br);
+        }
+    }
+
+    function selectType(t)
+    {
+        type = t;
+        if (type === 1)
+        {
+            buttonKotlin.className = "";
+            buttonJava.className = "unSelect";
+        } else
+        {
+            buttonKotlin.className = "unSelect";
+            buttonJava.className = "";
+        }
+        format()
+    }
+
+    // 清除
+    function clearEdit()
+    {
+        edit.value = "";
+    }
+
+    // 复制
+    function copy()
+    {
+        text.select();
+        try
+        {
+            var successful = document.execCommand('copy');
+            toast("已复制到剪贴板");
+            text.setSelectionRange(0, 0)
+        } catch (err)
+        {
+            alert('该浏览器不支持点击复制到剪贴板');
+        }
+    }
+
+    function toast(msg)
+    {
+        var duration = 500;
+        var m = document.createElement('div');
+        m.innerHTML = msg;
+        m.style.cssText = "width: 60%;min-width: 150px;opacity: 0.7;height: 30px;color: rgb(255, 255, 255);line-height: 30px;text-align: center;border-radius: 5px;position: fixed;top: 40%;left: 20%;z-index: 999999;background: rgb(0, 0, 0);font-size: 12px;";
+        document.body.appendChild(m);
+        setTimeout(function ()
+        {
+            var d = 0.5;
+            m.style.webkitTransition = '-webkit-transform ' + d + 's ease-in, opacity ' + d + 's ease-in';
+            m.style.opacity = '0';
+            setTimeout(function ()
+            {
+                document.body.removeChild(m)
+            }, d * 1000);
+        }, duration);
+    }
+
+</script>
+
+</html>
