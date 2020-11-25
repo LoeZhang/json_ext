@@ -202,6 +202,10 @@ inline fun <T> JSONArray?.forEachIndexReverse(action: (i: Int, T) -> Unit)
 
 fun Any?.toJson(): JSONObject
 {
+    if(this is JSONObject)
+    {
+        return this
+    }
     val json = JSONObject()
     if (this == null) return json
     this.javaClass.declaredFields.forEach()
@@ -235,6 +239,10 @@ fun Any?.toJson(): JSONObject
 
 fun List<*>?.toJsonArray(): JSONArray
 {
+    if(this is JSONArray)
+    {
+        return this
+    }
     val js = JSONArray()
     if (this == null) return js
     forEach()
